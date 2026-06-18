@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { margin: 0; padding: 0; }
+    body { background: #000; overflow: hidden; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById('c'), x = c.getContext('2d');
+
+function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+const N = 200, pts = [];
+
+function heart(t) {
+  return [
+    16 * Math.pow(Math.sin(t), 3),
+    -(13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t))
+  ];
+}
+
+function buildPts() {
+  pts.length = 0;
+  const cx = c.width / 2, cy = c.height / 2;
+  const scale = Math.min(c.width, c.height) * 0.028;
+  for (let i = 0; i < N; i++) {
+    const t = (i / N) * Math.PI * 2;
+    const [hx, hy] = heart(t);
+    const tx = cx + hx * scale, ty = cy + hy * scale;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.min(c.width, c.height) * 0.45;
+    pts.push({
+      sx: cx + Math.cos(angle) * dist,
+      sy: cy + Math.sin(angle) * dist,
+      tx, ty, x: 0, y: 0, ox: tx, oy: ty,
+      r: Math.random() * 4 + 2,
+      hue: Math.random() * 40 + 340,
+      phase: Math.random() * Math.PI * 2,
+      delay: Math.random() * 0.4
+    });
+  }
+}
+buildPts();
+window.addEventListener('resize', buildPts);
+
+let f = 0;
+const INTRO = 100;
+function ease(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+function draw() {
+  x.fillStyle = 'rgba(0,0,0,0.15)';
+  x.fillRect(0, 0, c.width, c.height);
+  f++;
+  const pulse = 1 + 0.06 * Math.sin(f * 0.05);
+
+  pts.forEach(p => {
+    let px, py;
+    if (f < INTRO) {
+      const progress = Math.max(0, Math.min(1, (f / INTRO - p.delay) / (1 - p.delay)));
+      const e = ease(progress);
+      px = p.sx + (p.tx - p.sx) * e;
+      py = p.sy + (p.ty - p.sy) * e;
+    } else {
+      const pf = f - INTRO;
+      const cx = c.width / 2, cy = c.height / 2;
+      px = cx + (p.ox - cx) * pulse + Math.sin(pf * 0.03 + p.phase) * 4;
+      py = cy + (p.oy - cy) * pulse + Math.cos(pf * 0.03 + p.phase) * 4;
+    }
+
+    x.beginPath();
+    x.arc(px, py, p.r, 0, Math.PI * 2);
+    x.fillStyle = `hsla(${p.hue}, 100%, 65%, 0.9)`;
+    x.fill();
+
+    if (f >= INTRO && Math.random() < 0.05) {
+      x.beginPath();
+      x.arc(px+(Math.random()-0.5)*30, py+(Math.random()-0.5)*30, Math.random()*2.5, 0, Math.PI*2);
+      x.fillStyle = `hsla(${p.hue}, 100%, 80%, 0.4)`;
+      x.fill();
+    }
+
+    if (f < INTRO + 10) {
+      x.beginPath();
+      x.arc(px, py, p.r*(1+(1-Math.min(1,(f-INTRO+10)/10))*3), 0, Math.PI*2);
+      x.fillStyle = `hsla(${p.hue}, 100%, 80%, 0.15)`;
+      x.fill();
+    }
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
